@@ -8,7 +8,8 @@ import (
 )
 
 // Series is a recurring component and the components that override its
-// instances (RFC 5545 3.8.4.4).
+// instances (RFC 5545 3.8.4.4). Set is the zero Set when the overrides
+// have no master.
 type Series struct {
 	Set       Set
 	Duration  time.Duration
@@ -54,10 +55,14 @@ func (s Series) Between(from, to time.Time) (iter.Seq[Instance], error) {
 		}
 	}
 	longest = max(longest, s.Duration)
-	// The master's instances that a shift or a duration can bring into the window.
-	occs, err := s.Set.occurrences(window{from.Add(-ahead - longest), to.Add(-behind), true})
-	if err != nil {
-		return nil, err
+	occs := func(func(occurrence) bool) {}
+	if !s.Set.Start.IsZero() {
+		// The master's instances that a shift or a duration can bring into the window.
+		var err error
+		occs, err = s.Set.occurrences(window{from.Add(-ahead - longest), to.Add(-behind), true})
+		if err != nil {
+			return nil, err
+		}
 	}
 	return func(yield func(Instance) bool) {
 		var pending []Instance

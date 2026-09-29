@@ -80,3 +80,17 @@ func TestSeriesLazy(t *testing.T) {
 		break
 	}
 }
+
+// Overrides without their master, as an invitation to one instance
+// carries them, are the series' only instances.
+func TestSeriesWithoutMaster(t *testing.T) {
+	at := time.Date(2025, 1, 3, 9, 0, 0, 0, time.UTC)
+	s := Series{Overrides: []Override{{ID: at, Start: at, Duration: time.Hour}}}
+	seq, err := s.Between(time.Time{}, at.AddDate(1, 0, 0))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got, want := slices.Collect(seq), []Instance{{at, at, at.Add(time.Hour), 0}}; !slices.Equal(got, want) {
+		t.Errorf("got %v, want %v", got, want)
+	}
+}
