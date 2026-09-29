@@ -22,7 +22,7 @@ func TestSeries(t *testing.T) {
 		{day(2, 9, 0), day(2, 9, 0), day(2, 10, 0), -1},
 		{day(3, 9, 0), day(3, 15, 0), day(3, 17, 0), 0},
 		{day(4, 9, 0), day(4, 10, 0), day(4, 10, 30), 2},
-		{day(5, 9, 0), day(5, 10, 0), day(5, 10, 30), -1},
+		{day(5, 9, 0), day(5, 10, 0), day(5, 10, 30), 2},
 		{day(10, 9, 0), day(10, 11, 0), day(10, 12, 0), 1},
 	}
 	check := func(from, to time.Time, want []Instance) {
@@ -41,7 +41,7 @@ func TestSeries(t *testing.T) {
 
 	// A THISANDFUTURE override moves later instances into a window their IDs are outside of.
 	s.Overrides = []Override{{ID: day(2, 9, 0), Future: true, Start: day(5, 9, 0), Duration: time.Hour}}
-	check(day(6, 0, 0), day(7, 0, 0), []Instance{{day(3, 9, 0), day(6, 9, 0), day(6, 10, 0), -1}})
+	check(day(6, 0, 0), day(7, 0, 0), []Instance{{day(3, 9, 0), day(6, 9, 0), day(6, 10, 0), 0}})
 	check(day(2, 0, 0), day(3, 0, 0), nil)
 }
 

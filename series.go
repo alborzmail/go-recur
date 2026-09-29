@@ -34,7 +34,8 @@ type Instance struct {
 // override replaces the master's instance with its ID, and is an
 // instance at its own start even where the master has none there. A
 // THISANDFUTURE override moves every later instance by as much as it
-// moves its own, and gives them its duration, up to the next one.
+// moves its own, and gives them its duration, up to the next one; they
+// are its instances, since its properties hold for them.
 func (s Series) Between(from, to time.Time) (iter.Seq[Instance], error) {
 	var ahead, behind, longest time.Duration
 	var futures []int
@@ -74,6 +75,7 @@ func (s Series) Between(from, to time.Time) (iter.Seq[Instance], error) {
 				f := s.Overrides[futures[k-1]]
 				inst.Start = o.start.Add(f.Start.Sub(f.ID))
 				inst.End = inst.Start.Add(f.Duration)
+				inst.Override = futures[k-1]
 			}
 			out = append(out, inst)
 		}
