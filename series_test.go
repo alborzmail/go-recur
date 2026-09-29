@@ -63,3 +63,20 @@ func TestSeriesInstant(t *testing.T) {
 		}
 	}
 }
+
+// A window up to the last year a date can write is walked only as far as
+// the caller reads.
+func TestSeriesLazy(t *testing.T) {
+	start := time.Date(2025, 1, 1, 9, 0, 0, 0, time.UTC)
+	s := Series{Set: Set{Start: Value{Time: start}, Rule: mustParse(t, "FREQ=SECONDLY")}}
+	seq, err := s.Between(start, time.Date(9999, 12, 31, 0, 0, 0, 0, time.UTC))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for i := range seq {
+		if !i.Start.Equal(start) {
+			t.Errorf("first instance at %v, want %v", i.Start, start)
+		}
+		break
+	}
+}

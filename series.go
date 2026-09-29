@@ -60,8 +60,32 @@ func (s Series) Between(from, to time.Time) (iter.Seq[Instance], error) {
 		return nil, err
 	}
 	return func(yield func(Instance) bool) {
-		var out []Instance
+		var pending []Instance
+		push := func(i Instance) {
+			if overlaps(i, from, to) {
+				k, _ := slices.BinarySearchFunc(pending, i, byStart)
+				pending = slices.Insert(pending, k, i)
+			}
+		}
+		// No later master instance starts before its ID less the widest
+		// backward shift, so what starts before that is in order.
+		flush := func(before time.Time) bool {
+			n := 0
+			for ; n < len(pending) && pending[n].Start.Before(before); n++ {
+				if !yield(pending[n]) {
+					return false
+				}
+			}
+			pending = pending[n:]
+			return true
+		}
+		for i, o := range s.Overrides {
+			push(Instance{o.ID, o.Start, o.Start.Add(o.Duration), i})
+		}
 		for o := range occs {
+			if !flush(o.start.Add(behind)) {
+				return
+			}
 			if slices.ContainsFunc(s.Overrides, func(v Override) bool { return v.ID.Equal(o.start) }) {
 				continue
 			}
@@ -77,21 +101,18 @@ func (s Series) Between(from, to time.Time) (iter.Seq[Instance], error) {
 				inst.End = inst.Start.Add(f.Duration)
 				inst.Override = futures[k-1]
 			}
-			out = append(out, inst)
+			push(inst)
 		}
-		for i, o := range s.Overrides {
-			out = append(out, Instance{o.ID, o.Start, o.Start.Add(o.Duration), i})
-		}
-		out = slices.DeleteFunc(out, func(i Instance) bool { return !overlaps(i, from, to) })
-		slices.SortStableFunc(out, func(a, b Instance) int {
-			return cmp.Or(a.Start.Compare(b.Start), a.ID.Compare(b.ID))
-		})
-		for _, i := range out {
+		for _, i := range pending {
 			if !yield(i) {
 				return
 			}
 		}
 	}, nil
+}
+
+func byStart(a, b Instance) int {
+	return cmp.Or(a.Start.Compare(b.Start), a.ID.Compare(b.ID))
 }
 
 // overlaps is RFC 4791 9.9's test: an instance without duration overlaps
